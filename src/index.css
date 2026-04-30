@@ -1,0 +1,63 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-ink-900 text-zinc-200 font-display antialiased;
+    font-feature-settings: 'cv11', 'ss01', 'ss03';
+    background-image:
+      radial-gradient(at 20% 0%, rgba(0, 229, 255, 0.08) 0px, transparent 50%),
+      radial-gradient(at 80% 100%, rgba(0, 229, 255, 0.05) 0px, transparent 50%);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    @apply bg-accent text-ink-900;
+  }
+
+  /* 自定义滚动条 */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-ink-900;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-ink-600 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-accent/50;
+  }
+}
+
+@layer components {
+  .grid-bg {
+    background-image:
+      linear-gradient(rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent;
+    background-image: linear-gradient(135deg, #ffffff 0%, #ffffff 40%, #00E5FF 100%);
+  }
+
+  .glow-text {
+    text-shadow: 0 0 40px rgba(0, 229, 255, 0.35);
+  }
+
+  .card-border {
+    @apply border border-white/5 hover:border-accent/40 transition-colors duration-300;
+  }
+}

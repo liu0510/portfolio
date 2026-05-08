@@ -1,23 +1,20 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Trash2, Tag as TagIcon, Smile } from 'lucide-react';
+import { Send, Trash2, Tag as TagIcon, Smile, Loader2, AlertCircle } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  apiCreateEntry,
+  apiDeleteEntry,
+  apiListEntries,
+  ApiError,
+  type Entry,
+} from '../lib/api';
 
-const STORAGE_KEY = 'liuxin.moods';
+const MODULE = 'mood';
 
 const EMOJI_PRESETS = ['😀', '😌', '🤔', '😔', '😡', '🎉', '💪', '🚀', '☕', '🌙', '🍃', '❤️'];
 const TAG_PRESETS = ['工作', '生活', '学习', '运动', '灵感', '吐槽'];
 const CATEGORY_TABS = ['ALL', ...TAG_PRESETS];
-
-type MoodEntry = {
-  id: string;
-  time: string;
-  text: string;
-  emoji?: string;
-  tags?: string[];
-};
-
-type MoodStore = Record<string, MoodEntry[]>;
 
 function todayKey(): string {
   const d = new Date();
@@ -29,60 +26,63 @@ function nowTime(): string {
   return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
-function loadStore(): MoodStore {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return {};
-    const parsed = JSON.parse(raw);
-    return parsed && typeof parsed === 'object' ? (parsed as MoodStore) : {};
-  } catch {
-    return {};
-  }
-}
-
-function saveStore(store: MoodStore) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(store));
-  } catch {
-    // ignore
-  }
-}
-
 export default function MoodPage() {
-  const [store, setStore] = useState<MoodStore>({});
+  const [entries, setEntries] = useState<Entry[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const [text, setText] = useState('');
   const [tags, setTags] = useState<string[]>([]);
   const [activeCategory, setActiveCategory] = useState<string>('ALL');
-  const [pendingDelete, setPendingDelete] = useState<{ date: string; id: string } | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    setStore(loadStore());
+    let cancelled = false;
+    (async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        const list = await apiListEntries(MODULE);
+        if (!cancelled) setEntries(list);
+      } catch (e) {
+        if (!cancelled) {
+          if (e instanceof ApiError && e.status === 401) {
+            // 已被 api.ts 清掉 token，AuthContext 监听后会让路由把用户踢回 /
+            return;
+          }
+          setError('加载失败，请刷新重试');
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const totalCount = useMemo(
-    () => Object.values(store).reduce((acc, arr) => acc + arr.length, 0),
-    [store],
-  );
-
-  const filteredStore = useMemo(() => {
-    if (activeCategory === 'ALL') return store;
-    const next: MoodStore = {};
-    for (const [date, list] of Object.entries(store)) {
-      const matched = list.filter((m) => m.tags?.includes(activeCategory));
-      if (matched.length) next[date] = matched;
+  const grouped = useMemo(() => {
+    const g: Record<string, Entry[]> = {};
+    for (const e of entries) {
+      if (activeCategory !== 'ALL' && !e.tags?.includes(activeCategory)) continue;
+      (g[e.date] ??= []).push(e);
     }
-    return next;
-  }, [store, activeCategory]);
+    return g;
+  }, [entries, activeCategory]);
 
   const sortedDates = useMemo(
-    () => Object.keys(filteredStore).sort((a, b) => (a < b ? 1 : -1)),
-    [filteredStore],
+    () => Object.keys(grouped).sort((a, b) => (a < b ? 1 : -1)),
+    [grouped],
   );
 
+  const totalCount = entries.length;
+  const totalDays = useMemo(() => new Set(entries.map((e) => e.date)).size, [entries]);
   const filteredCount = useMemo(
-    () => Object.values(filteredStore).reduce((acc, arr) => acc + arr.length, 0),
-    [filteredStore],
+    () => Object.values(grouped).reduce((acc, arr) => acc + arr.length, 0),
+    [grouped],
   );
 
   const insertEmoji = (e: string) => {
@@ -106,23 +106,28 @@ export default function MoodPage() {
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
-  const submit = () => {
+  const submit = async () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    const date = todayKey();
-    const entry: MoodEntry = {
-      id: `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      time: nowTime(),
-      text: trimmed,
-      tags: tags.length ? [...tags] : undefined,
-    };
-    setStore((prev) => {
-      const next = { ...prev, [date]: [entry, ...(prev[date] ?? [])] };
-      saveStore(next);
-      return next;
-    });
-    setText('');
-    setTags([]);
+    if (!trimmed || submitting) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      const created = await apiCreateEntry({
+        module: MODULE,
+        text: trimmed,
+        date: todayKey(),
+        time: nowTime(),
+        tags: tags.length ? tags : undefined,
+      });
+      setEntries((prev) => [created, ...prev]);
+      setText('');
+      setTags([]);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) return;
+      setError('保存失败，请重试');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const onKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -132,16 +137,20 @@ export default function MoodPage() {
     }
   };
 
-  const remove = (date: string, id: string) => {
-    setStore((prev) => {
-      const list = (prev[date] ?? []).filter((m) => m.id !== id);
-      const next = { ...prev };
-      if (list.length) next[date] = list;
-      else delete next[date];
-      saveStore(next);
-      return next;
-    });
-    setPendingDelete(null);
+  const remove = async (id: string) => {
+    if (deletingId) return;
+    setDeletingId(id);
+    setError(null);
+    try {
+      await apiDeleteEntry(id);
+      setEntries((prev) => prev.filter((e) => e.id !== id));
+      setPendingDelete(null);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) return;
+      setError('删除失败，请重试');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -171,7 +180,7 @@ export default function MoodPage() {
           <span className="text-accent">DAILY MOOD</span>
         </motion.div>
 
-        {/* 头部：标签 + 大标题 + 描述 */}
+        {/* 头部 */}
         <div className="mt-12 grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -235,6 +244,21 @@ export default function MoodPage() {
           </div>
         </motion.div>
 
+        {/* 错误条 */}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="mt-6 flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-2.5 text-sm text-red-300"
+            >
+              <AlertCircle className="h-4 w-4 flex-none" />
+              {error}
+            </motion.div>
+          )}
+        </AnimatePresence>
+
         {/* 输入区 */}
         <motion.div
           initial={{ opacity: 0, y: 12 }}
@@ -249,7 +273,8 @@ export default function MoodPage() {
             onKeyDown={onKeyDown}
             placeholder="此刻在想什么…（Ctrl/Cmd + Enter 快速记录）"
             rows={3}
-            className="w-full resize-none rounded-lg border border-white/5 bg-ink-900/60 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-accent/50"
+            disabled={submitting}
+            className="w-full resize-none rounded-lg border border-white/5 bg-ink-900/60 px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-zinc-600 focus:border-accent/50 disabled:opacity-60"
           />
 
           <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
@@ -298,23 +323,37 @@ export default function MoodPage() {
           <div className="mt-5 flex items-center justify-between">
             <span className="font-mono text-[11px] uppercase tracking-widest text-zinc-500">
               {activeCategory === 'ALL'
-                ? `共 ${totalCount} 条 · ${Object.keys(store).length} 天`
+                ? `共 ${totalCount} 条 · ${totalDays} 天`
                 : `#${activeCategory} · ${filteredCount} 条`}
             </span>
             <button
               onClick={submit}
-              disabled={!text.trim()}
+              disabled={!text.trim() || submitting}
               className="group flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-medium text-ink-900 transition-all enabled:hover:shadow-[0_0_24px_rgb(var(--color-accent)/0.5)] disabled:cursor-not-allowed disabled:opacity-40"
             >
-              记录
-              <Send className="h-3.5 w-3.5 transition-transform group-enabled:group-hover:translate-x-0.5" />
+              {submitting ? (
+                <>
+                  保存中
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                </>
+              ) : (
+                <>
+                  记录
+                  <Send className="h-3.5 w-3.5 transition-transform group-enabled:group-hover:translate-x-0.5" />
+                </>
+              )}
             </button>
           </div>
         </motion.div>
 
         {/* 列表 */}
         <div className="mt-14 space-y-12">
-          {sortedDates.length === 0 ? (
+          {loading ? (
+            <div className="flex items-center justify-center gap-2 py-24 text-sm text-zinc-500">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              加载中…
+            </div>
+          ) : sortedDates.length === 0 ? (
             <div className="rounded-xl border border-dashed border-white/10 py-24 text-center text-zinc-500">
               {activeCategory === 'ALL'
                 ? '还没有记录，写下第一条心情吧 ✨'
@@ -327,14 +366,15 @@ export default function MoodPage() {
                   <h3 className="font-mono text-sm tracking-widest text-accent">{date}</h3>
                   <span className="h-px flex-1 bg-gradient-to-r from-accent/40 to-transparent" />
                   <span className="font-mono text-[11px] text-zinc-500">
-                    {filteredStore[date].length} 条
+                    {grouped[date].length} 条
                   </span>
                 </div>
 
                 <ul className="space-y-3">
                   <AnimatePresence initial={false}>
-                    {filteredStore[date].map((m) => {
-                      const isPending = pendingDelete?.date === date && pendingDelete?.id === m.id;
+                    {grouped[date].map((m) => {
+                      const isPending = pendingDelete === m.id;
+                      const isDeleting = deletingId === m.id;
                       return (
                         <motion.li
                           key={m.id}
@@ -367,21 +407,24 @@ export default function MoodPage() {
                             {isPending ? (
                               <>
                                 <button
-                                  onClick={() => remove(date, m.id)}
-                                  className="rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20"
+                                  onClick={() => remove(m.id)}
+                                  disabled={isDeleting}
+                                  className="flex items-center gap-1 rounded-md border border-red-500/40 bg-red-500/10 px-2 py-1 text-xs text-red-300 hover:bg-red-500/20 disabled:opacity-60"
                                 >
+                                  {isDeleting && <Loader2 className="h-3 w-3 animate-spin" />}
                                   确认删除
                                 </button>
                                 <button
                                   onClick={() => setPendingDelete(null)}
-                                  className="rounded-md border border-white/10 px-2 py-1 text-xs text-zinc-400 hover:text-white"
+                                  disabled={isDeleting}
+                                  className="rounded-md border border-white/10 px-2 py-1 text-xs text-zinc-400 hover:text-white disabled:opacity-60"
                                 >
                                   取消
                                 </button>
                               </>
                             ) : (
                               <button
-                                onClick={() => setPendingDelete({ date, id: m.id })}
+                                onClick={() => setPendingDelete(m.id)}
                                 aria-label="删除"
                                 className="rounded-md p-1.5 text-zinc-500 opacity-0 transition-all hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100"
                               >

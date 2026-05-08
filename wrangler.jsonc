@@ -5,5 +5,15 @@
   "assets": {
     "directory": "./dist",
     "not_found_handling": "single-page-application"
-  }
+  },
+  // D1 database binding。Cloudflare Pages（Git 集成部署）实际 binding 仍以
+  // 项目控制台 Settings > Functions > D1 database bindings 为准；这里的配置
+  // 主要用于本地 `wrangler pages dev` 调试。
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "portfolio-db",
+      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
+    }
+  ]
 }

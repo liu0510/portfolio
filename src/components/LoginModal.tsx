@@ -9,7 +9,7 @@ type Props = {
 };
 
 export default function LoginModal({ open, onClose }: Props) {
-  const { login } = useAuth();
+  const { login, loading } = useAuth();
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -34,9 +34,10 @@ export default function LoginModal({ open, onClose }: Props) {
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onClose]);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const result = login(username.trim(), password);
+    setError(null);
+    const result = await login(username.trim(), password);
     if (!result.ok) {
       setError(result.error ?? '登录失败');
       return;
@@ -126,10 +127,11 @@ export default function LoginModal({ open, onClose }: Props) {
 
               <button
                 type="submit"
-                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-ink-900 transition-all hover:shadow-[0_0_24px_rgb(var(--color-accent)/0.5)]"
+                disabled={loading}
+                className="group flex w-full items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2.5 text-sm font-medium text-ink-900 transition-all enabled:hover:shadow-[0_0_24px_rgb(var(--color-accent)/0.5)] disabled:cursor-not-allowed disabled:opacity-60"
               >
-                登录
-                <LogIn className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+                {loading ? '登录中…' : '登录'}
+                <LogIn className="h-3.5 w-3.5 transition-transform group-enabled:group-hover:translate-x-0.5" />
               </button>
             </form>
           </motion.div>

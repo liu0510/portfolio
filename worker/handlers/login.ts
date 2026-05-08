@@ -1,7 +1,11 @@
-import { jsonResponse, signToken } from '../_lib/auth';
-import type { Env } from '../_lib/types';
+import { jsonResponse, signToken } from '../lib/auth';
+import type { Env } from '../lib/types';
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export async function handleLogin(request: Request, env: Env): Promise<Response> {
+  if (request.method !== 'POST') {
+    return jsonResponse({ error: 'method_not_allowed' }, 405);
+  }
+
   let body: { username?: unknown; password?: unknown };
   try {
     body = await request.json();
@@ -26,4 +30,4 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const { token, exp } = await signToken(username, env.JWT_SECRET);
   return jsonResponse({ token, exp, user: username });
-};
+}

@@ -4,3 +4,7 @@ export interface Env {
   ADMIN_PASS: string;
   JWT_SECRET: string;
 }
+
+export interface WorkerEnv extends Env {
+  ASSETS: Fetcher;
+}

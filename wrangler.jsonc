@@ -1,14 +1,17 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "portfolio",
+  "main": "worker/index.ts",
   "compatibility_date": "2025-01-01",
   "assets": {
     "directory": "./dist",
-    "not_found_handling": "single-page-application"
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    // 仅 /api/* 走 Worker；其它路径走 assets，找不到时由 SPA fallback 兜底
+    "run_worker_first": ["/api/*"]
   },
-  // D1 database binding。Cloudflare Pages（Git 集成部署）实际 binding 仍以
-  // 项目控制台 Settings > Functions > D1 database bindings 为准；这里的配置
-  // 主要用于本地 `wrangler pages dev` 调试。
+  // D1 binding。Workers + Static Assets 项目里，这里的 database_id 是真生效的，
+  // 必须在 Cloudflare D1 控制台创建 portfolio-db 后填入实际 ID
   "d1_databases": [
     {
       "binding": "DB",

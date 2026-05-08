@@ -15,5 +15,5 @@
     "noUnusedParameters": true,
     "composite": true
   },
-  "include": ["functions/**/*.ts"]
+  "include": ["worker/**/*.ts"]
 }

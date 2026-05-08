@@ -9,14 +9,9 @@
     "not_found_handling": "single-page-application",
     // 仅 /api/* 走 Worker；其它路径走 assets，找不到时由 SPA fallback 兜底
     "run_worker_first": ["/api/*"]
-  },
-  // D1 binding。Workers + Static Assets 项目里，这里的 database_id 是真生效的，
-  // 必须在 Cloudflare D1 控制台创建 portfolio-db 后填入实际 ID
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "portfolio-db",
-      "database_id": "REPLACE_WITH_YOUR_D1_DATABASE_ID"
-    }
-  ]
+  }
+  // D1 binding 等创建好 portfolio-db 数据库后再加回来：
+  // "d1_databases": [
+  //   { "binding": "DB", "database_name": "portfolio-db", "database_id": "<填真实 id>" }
+  // ]
 }

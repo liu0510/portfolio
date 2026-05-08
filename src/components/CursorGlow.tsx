@@ -25,7 +25,7 @@ export default function CursorGlow() {
       className="pointer-events-none fixed z-0 h-[480px] w-[480px] rounded-full"
       style={{
         background:
-          'radial-gradient(circle, rgba(0,229,255,0.18) 0%, rgba(0,229,255,0.06) 35%, rgba(0,229,255,0) 70%)',
+          'radial-gradient(circle, rgb(var(--color-accent) / 0.18) 0%, rgb(var(--color-accent) / 0.06) 35%, rgb(var(--color-accent) / 0) 70%)',
         mixBlendMode: 'screen',
       }}
       animate={{ x: pos.x - 240, y: pos.y - 240 }}

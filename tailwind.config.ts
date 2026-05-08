@@ -5,16 +5,25 @@ export default {
   theme: {
     extend: {
       colors: {
+        white: 'rgb(var(--color-white) / <alpha-value>)',
         ink: {
-          900: '#0A0A0B',
-          800: '#101013',
-          700: '#1A1A1F',
-          600: '#26262E',
+          900: 'rgb(var(--color-ink-900) / <alpha-value>)',
+          800: 'rgb(var(--color-ink-800) / <alpha-value>)',
+          700: 'rgb(var(--color-ink-700) / <alpha-value>)',
+          600: 'rgb(var(--color-ink-600) / <alpha-value>)',
+        },
+        zinc: {
+          200: 'rgb(var(--color-zinc-200) / <alpha-value>)',
+          300: 'rgb(var(--color-zinc-300) / <alpha-value>)',
+          400: 'rgb(var(--color-zinc-400) / <alpha-value>)',
+          500: 'rgb(var(--color-zinc-500) / <alpha-value>)',
+          600: 'rgb(var(--color-zinc-600) / <alpha-value>)',
+          700: 'rgb(var(--color-zinc-700) / <alpha-value>)',
         },
         accent: {
-          DEFAULT: '#00E5FF',
-          soft: 'rgba(0, 229, 255, 0.12)',
-          glow: 'rgba(0, 229, 255, 0.35)',
+          DEFAULT: 'rgb(var(--color-accent) / <alpha-value>)',
+          soft: 'rgb(var(--color-accent) / 0.12)',
+          glow: 'rgb(var(--color-accent) / 0.35)',
         },
       },
       fontFamily: {

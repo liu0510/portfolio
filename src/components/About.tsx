@@ -76,7 +76,7 @@ function SkillBar({ name, level, delay }: { name: string; level: number; delay: 
           whileInView={{ width: `${level}%` }}
           viewport={{ once: true, margin: '-80px' }}
           transition={{ duration: 1.2, delay, ease: [0.22, 1, 0.36, 1] }}
-          className="h-full bg-gradient-to-r from-accent/60 to-accent shadow-[0_0_8px_rgba(0,229,255,0.5)]"
+          className="h-full bg-gradient-to-r from-accent/60 to-accent shadow-[0_0_8px_rgb(var(--color-accent)/0.5)]"
         />
       </div>
     </div>

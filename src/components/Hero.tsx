@@ -27,7 +27,7 @@ export default function Hero() {
         className="absolute -top-40 left-1/2 -z-10 h-[700px] w-[700px] -translate-x-1/2 rounded-full opacity-40 blur-3xl"
         style={{
           background:
-            'radial-gradient(circle, rgba(0,229,255,0.35) 0%, rgba(0,229,255,0) 70%)',
+            'radial-gradient(circle, rgb(var(--color-accent) / 0.35) 0%, rgb(var(--color-accent) / 0) 70%)',
         }}
       />
 
